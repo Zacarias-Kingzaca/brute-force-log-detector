@@ -1,53 +1,64 @@
+from rich import print
+from rich.panel import Panel
 from collections import Counter
 import re
 
+"""
+Brute-Force Attack Detector
+Author: Zacarias Eduardo Joao
+Description: Analyzes auth logs and detects IPs with multiple failed login attempts.
+Usage: python brute_force_detector.py
+Log format expected: "Login failed - IP: 192.168.1.10"
+"""
 
 print("=== BRUTE-FORCE DETECTOR ===\n")
 
-# Lê o arquivo de logs
+# Load log file
 try:
     with open("logs.txt", "r") as f:
         logs = f.readlines()
 except FileNotFoundError:
-    print("Erro: arquivo logs.txt não encontrado. Crie o arquivo primeiro!")
+    print("[red]Error: logs.txt file not found. Please create the log file first![/]")
     exit()
 
-# Pega só as linhas que são falha de login
-falhas = []
-ips_falhas = []
+# Filter failed login attempts
+failed_attempts = []
+failed_ips = []
 
-for linha in logs:
-    if "Login failed" in linha:
-        falhas.append(linha)
-        # Regex para extrair o IP: procura por padrão IP: XXX.XXX.XXX.XXX
-        ip = re.search(r'IP:\s*(\d+\.\d+\.\d+\.\d+)', linha)
-        if ip:
-            ips_falhas.append(ip.group(1))
+for line in logs:
+    if "Login failed" in line:
+        failed_attempts.append(line)
+        ip_match = re.search(r'IP:\s*(\d+\.\d+\.\d+\.\d+)', line)
+        if ip_match:
+            failed_ips.append(ip_match.group(1))
 
-print(f"Total de tentativas falhas encontradas: {len(falhas)}")
+print(f"Total failed attempts found: {len(failed_attempts)}")
 
-# Conta quantas vezes cada IP falhou
-contagem = Counter(ips_falhas)
+# Count failures per IP
+ip_counter = Counter(failed_ips)
 
-print("\n--- Relatório de IPs suspeitos ---")
-ataque_detectado = False
-for ip, qtd in contagem.items():
-    if qtd >= 3:  # Se falhou 3 vezes ou mais, é suspeito
-        print(f"[!] ALERTA: IP \033[31m{ip}\033[m tentou {qtd} vezes - POSSÍVEL BRUTE-FORCE")
-        ataque_detectado = True
+report_content = ""
+attack_detected = False
+
+for ip, count in ip_counter.items():
+    if count >= 3: # Threshold for brute-force
+        report_content += f"[!] ALERT: IP [red]{ip}[/] attempted {count} times - POSSIBLE BRUTE-FORCE\n"
+        attack_detected = True
     else:
-        print(f"[OK] IP {ip} - {qtd} tentativa(s)")
+        print(f"[OK] IP {ip} - {count} attempt(s)")
 
-if ataque_detectado:
-    print("\n>>> AÇÃO RECOMENDADA: Bloquear IPs acima no firewall <<<")
+print()
+print(Panel(report_content if report_content else "No suspicious activity.", title="--- SUSPICIOUS IP REPORT ---", width=80, padding=1))
+
+if attack_detected:
+    print("\n[yellow]>>> RECOMMENDED ACTION: Block listed IPs on firewall <<< [/]")
 else:
-    print("\nNenhum ataque detectado.")
+    print("\nNo attack detected.")
 
-# Salva relatório
-with open("relatorio.txt", "w") as out:
-    out.write("RELATORIO DE SEGURANCA\n")
-    for ip, qtd in contagem.items():
-        out.write(f"{ip} - {qtd} falhas\n")
+# Save report
+with open("security_report.txt", "w") as out:
+    out.write("SECURITY REPORT - BRUTE-FORCE ANALYSIS\n")
+    for ip, count in ip_counter.items():
+        out.write(f"{ip} - {count} failed attempts\n")
 
-print("\nRelatório salvo em relatorio.txt")
-
+print("\n[green]Report saved to security_report.txt[/]")

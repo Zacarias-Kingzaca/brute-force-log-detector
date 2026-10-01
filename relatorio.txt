@@ -1,4 +1,0 @@
-RELATORIO DE SEGURANCA
-192.168.1.10 - 5 falhas
-10.0.0.45 - 4 falhas
-45.33.22.10 - 6 falhas
